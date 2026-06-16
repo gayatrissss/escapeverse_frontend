@@ -246,6 +246,7 @@ export default function Game() {
       game.setGameLevel(level);
 
       // Fetch random puzzles based on session level
+      console.log("Level:", level);
       api.get(`/puzzle/random?chapter=abandoned-mansion&level=${level}`)
         .then(pRes => {
           if (pRes.data.puzzles && pRes.data.puzzles.length > 0) {
