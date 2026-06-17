@@ -37,8 +37,25 @@ export const useSocketStore = create((set, get) => ({
         return { typingUsers: data.typing ? [...filtered, data] : filtered };
       });
     });
-    socket.on('itemCollected', (data) => { /* handled in game store via API */ });
-    socket.on('puzzleSolved', (data) => { /* handled via API */ });
+    socket.on('itemCollected', (data) => {
+      set((s) => ({
+        chatMessages: [...s.chatMessages.slice(-99), {
+          type: 'system', username: 'System',
+          message: `${data.username} collected ${data.item?.name || 'an item'}`
+        }]
+      }));
+    });
+    socket.on('puzzleSolved', (data) => {
+      set((s) => ({
+        solvedPuzzles: s.solvedPuzzles.includes(data.puzzleId)
+          ? s.solvedPuzzles
+          : [...s.solvedPuzzles, data.puzzleId],
+        chatMessages: [...s.chatMessages.slice(-99), {
+          type: 'system', username: 'System',
+          message: `${data.username} solved ${data.puzzleName || 'a puzzle'}! (+${data.points || 0} pts)`
+        }]
+      }));
+    });
     socket.on('timerUpdated', (data) => { /* handled via game store */ });
     socket.on('gameWon', () => {});
     socket.on('gameLost', () => {});

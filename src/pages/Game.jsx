@@ -220,7 +220,7 @@ export default function Game() {
   const navigate = useNavigate();
   const { user, updateUser } = useAuthStore();
   const game = useGameStore();
-  const { cursors, chatMessages, sendChat, addChatMessage, joinRoom } = useSocketStore();
+  const { cursors, chatMessages, sendChat, addChatMessage, joinRoom, connected, emitPuzzleSolved, emitItemCollected } = useSocketStore();
   const [puzzles, setPuzzles] = useState([]);
   const [activePuzzle, setActivePuzzle] = useState(null);
   const [answer, setAnswer] = useState('');
@@ -351,8 +351,12 @@ export default function Game() {
       if (correct) {
         toast.success('Puzzle solved!');
         game.solvePuzzle(activePuzzle._id, activePuzzle.points);
+        // Broadcast solve to other players via socket
+        emitPuzzleSolved(sessionId, { puzzleId: activePuzzle._id, puzzleName: activePuzzle.name, points: activePuzzle.points });
         if (activePuzzle.rewards?.item && activePuzzle.rewards.item !== 'freedom') {
-          game.addItem({ _id: `item-${Date.now()}`, name: activePuzzle.rewards.item, type: 'clue', description: `Found while solving ${activePuzzle.name}` });
+          const item = { _id: `item-${Date.now()}`, name: activePuzzle.rewards.item, type: 'clue', description: `Found while solving ${activePuzzle.name}` };
+          game.addItem(item);
+          emitItemCollected(sessionId, item);
         }
         game.addEchoMessage({ text: `Great job solving ${activePuzzle.name}! Keep going!`, type: 'praise' });
         setActivePuzzle(null);
@@ -374,6 +378,8 @@ export default function Game() {
       if (data.correct) {
         toast.success(data.message);
         game.solvePuzzle(activePuzzle._id, activePuzzle.points);
+        // Broadcast solve to other players via socket
+        emitPuzzleSolved(sessionId, { puzzleId: activePuzzle._id, puzzleName: activePuzzle.name, points: activePuzzle.points });
         if (activePuzzle.rewards?.item && activePuzzle.rewards.item !== 'freedom') {
           try {
             const itemRes = await api.post(`/game/${sessionId}/collect`, {
@@ -381,6 +387,7 @@ export default function Game() {
               description: `Found while solving ${activePuzzle.name}`
             });
             game.addItem(itemRes.data.item);
+            emitItemCollected(sessionId, itemRes.data.item);
           } catch {}
         }
         game.addEchoMessage({ text: `Great job solving ${activePuzzle.name}! Keep going!`, type: 'praise' });
@@ -554,10 +561,24 @@ export default function Game() {
           {showChat && (
             <motion.div initial={{ x: 300 }} animate={{ x: 0 }} exit={{ x: 300 }} className="w-72 glass border-l border-white/10 flex flex-col">
               <div className="flex items-center justify-between p-3 border-b border-white/10">
-                <h3 className="font-display font-bold text-sm">Chat</h3>
+                <h3 className="font-display font-bold text-sm flex items-center gap-2">
+                  Chat
+                  <span className={`w-2 h-2 rounded-full ${connected ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
+                  <span className={`text-xs font-normal ${connected ? 'text-green-400' : 'text-red-400'}`}>
+                    {connected ? 'Connected' : 'Offline'}
+                  </span>
+                </h3>
                 <button onClick={() => setShowChat(false)}><FiX /></button>
               </div>
               <div ref={chatRef} className="flex-1 overflow-y-auto p-3 space-y-2">
+                {!connected && (
+                  <div className="text-xs text-center text-yellow-400 bg-yellow-400/10 rounded-lg p-2 mb-2">
+                    Not connected to server. Make sure the backend is running.
+                  </div>
+                )}
+                {chatMessages.length === 0 && connected && (
+                  <div className="text-xs text-center text-dark-300 mt-8">No messages yet. Say hi!</div>
+                )}
                 {chatMessages.map((msg, i) => (
                   <div key={i} className={`text-xs ${msg.type === 'system' ? 'text-dark-300 italic' : ''}`}>
                     <span className="font-semibold text-neon-cyan">{msg.username || msg.userId?.username}: </span>
@@ -566,8 +587,8 @@ export default function Game() {
                 ))}
               </div>
               <div className="p-3 border-t border-white/10 flex gap-2">
-                <input value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleChatSend()} placeholder="Type..." className="input-field text-xs !py-2" />
-                <button onClick={handleChatSend} className="btn-primary !p-2 !px-3"><FiSend size={14} /></button>
+                <input value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleChatSend()} placeholder={connected ? 'Type...' : 'Not connected'} disabled={!connected} className="input-field text-xs !py-2 disabled:opacity-50" />
+                <button onClick={handleChatSend} disabled={!connected} className="btn-primary !p-2 !px-3 disabled:opacity-50"><FiSend size={14} /></button>
               </div>
             </motion.div>
           )}
