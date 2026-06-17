@@ -249,8 +249,9 @@ export default function Game() {
       console.log("Level:", level);
       api.get(`/puzzle/random?chapter=abandoned-mansion&level=${level}`)
         .then(pRes => {
-          if (pRes.data.puzzles && pRes.data.puzzles.length > 0) {
-            setPuzzles(pRes.data.puzzles);
+          const puzzleData = pRes?.data?.puzzles;
+          if (Array.isArray(puzzleData) && puzzleData.length > 0) {
+            setPuzzles(puzzleData);
           } else {
             setPuzzles(FALLBACK_PUZZLES);
             setUseLocalMode(true);
@@ -271,7 +272,7 @@ export default function Game() {
       toast('Playing in offline mode - puzzles loaded locally', { icon: '🎮' });
     });
 
-    api.get(`/inventory/session/${sessionId}`).then(r => game.setInventory(r.data.items)).catch(() => {});
+    api.get(`/inventory/session/${sessionId}`).then(r => game.setInventory(r?.data?.items || [])).catch(() => {});
     joinRoom(sessionId);
 
     timerRef.current = setInterval(() => {
@@ -329,15 +330,17 @@ export default function Game() {
   }, [sessionId, game, user, useLocalMode]);
 
   const handleObjectClick = (objectName) => {
-    const puzzle = puzzles.find(p => p.objectName === objectName && p.roomId === game.currentRoom && !game.solvedPuzzles.includes(p._id));
+    const allPuzzles = puzzles || [];
+    const solved = game.solvedPuzzles || [];
+    const puzzle = allPuzzles.find(p => p.objectName === objectName && p.roomId === game.currentRoom && !solved.includes(p._id));
     if (puzzle) {
       setActivePuzzle(puzzle);
       setAnswer('');
       setHintLevel(0);
       setCurrentHint('');
     } else {
-      const solved = puzzles.find(p => p.objectName === objectName && p.roomId === game.currentRoom && game.solvedPuzzles.includes(p._id));
-      if (solved) toast.success('Already solved!');
+      const solvedPuzzle = allPuzzles.find(p => p.objectName === objectName && p.roomId === game.currentRoom && solved.includes(p._id));
+      if (solvedPuzzle) toast.success('Already solved!');
       else toast('Nothing interesting here...');
     }
   };
@@ -361,7 +364,8 @@ export default function Game() {
         game.addEchoMessage({ text: `Great job solving ${activePuzzle.name}! Keep going!`, type: 'praise' });
         setActivePuzzle(null);
         // Check if all puzzles solved
-        const remaining = puzzles.filter(p => !game.solvedPuzzles.includes(p._id) && p._id !== activePuzzle._id);
+        const solved = game.solvedPuzzles || [];
+        const remaining = (puzzles || []).filter(p => !solved.includes(p._id) && p._id !== activePuzzle._id);
         if (remaining.length === 0) {
           endGame(true);
         }
@@ -393,8 +397,10 @@ export default function Game() {
         game.addEchoMessage({ text: `Great job solving ${activePuzzle.name}! Keep going!`, type: 'praise' });
         setActivePuzzle(null);
         // Check if all puzzles solved
-        const remaining = puzzles.filter(p => p.roomId === game.currentRoom && !game.solvedPuzzles.includes(p._id) && p._id !== activePuzzle._id);
-        if (remaining.length === 0 && puzzles.filter(p => !game.solvedPuzzles.includes(p._id) && p._id !== activePuzzle._id).length === 0) {
+        const solved = game.solvedPuzzles || [];
+        const allPuzzles = puzzles || [];
+        const remaining = allPuzzles.filter(p => p.roomId === game.currentRoom && !solved.includes(p._id) && p._id !== activePuzzle._id);
+        if (remaining.length === 0 && allPuzzles.filter(p => !solved.includes(p._id) && p._id !== activePuzzle._id).length === 0) {
           endGame(true);
         }
       } else {
@@ -445,7 +451,7 @@ export default function Game() {
 
   const formatTime = (s) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
   const currentRoom = ROOMS[game.currentRoom];
-  const roomPuzzles = puzzles.filter(p => p.roomId === game.currentRoom);
+  const roomPuzzles = (puzzles || []).filter(p => p.roomId === game.currentRoom);
 
   return (
     <div className="fixed inset-0 bg-dark-900 flex flex-col z-50">
