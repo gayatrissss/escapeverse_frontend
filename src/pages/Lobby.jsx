@@ -23,7 +23,7 @@ export default function Lobby() {
     try {
       const { data } = await api.post('/room/create', form);
       toast.success('Room created!');
-      navigate(`/game/${data.room._id}`);
+      navigate(`/game/${data.sessionId || data.room._id}`);
     } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
   };
 
@@ -31,7 +31,8 @@ export default function Lobby() {
     try {
       const { data } = await api.post(`/room/${roomId}/join`);
       toast.success('Joined room!');
-      navigate(`/game/${roomId}`);
+      const sessionId = data.sessionId || roomId;
+      navigate(`/game/${sessionId}`);
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Failed to join';
       toast.error(msg);
