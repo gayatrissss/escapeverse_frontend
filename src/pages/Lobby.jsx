@@ -32,7 +32,11 @@ export default function Lobby() {
       const { data } = await api.post(`/room/${roomId}/join`);
       toast.success('Joined room!');
       navigate(`/game/${roomId}`);
-    } catch (err) { toast.error(err.response?.data?.message || 'Failed to join'); }
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || 'Failed to join';
+      toast.error(msg);
+      console.error('Join room error:', err.response?.status, msg);
+    }
   };
 
   const filtered = (rooms || []).filter(r => r.name.toLowerCase().includes(search.toLowerCase()));

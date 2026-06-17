@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { io } from 'socket.io-client';
+import { useGameStore } from './gameStore';
 
 export const useSocketStore = create((set, get) => ({
   socket: null,
@@ -39,18 +40,20 @@ export const useSocketStore = create((set, get) => ({
     });
     socket.on('itemCollected', (data) => {
       set((s) => ({
-        chatMessages: [...s.chatMessages.slice(-99), {
+        chatMessages: [...(s.chatMessages || []).slice(-99), {
           type: 'system', username: 'System',
           message: `${data.username} collected ${data.item?.name || 'an item'}`
         }]
       }));
     });
     socket.on('puzzleSolved', (data) => {
+      const game = useGameStore.getState();
+      const solved = game.solvedPuzzles || [];
+      if (!solved.includes(data.puzzleId)) {
+        game.solvePuzzle(data.puzzleId, data.points || 0);
+      }
       set((s) => ({
-        solvedPuzzles: s.solvedPuzzles.includes(data.puzzleId)
-          ? s.solvedPuzzles
-          : [...s.solvedPuzzles, data.puzzleId],
-        chatMessages: [...s.chatMessages.slice(-99), {
+        chatMessages: [...(s.chatMessages || []).slice(-99), {
           type: 'system', username: 'System',
           message: `${data.username} solved ${data.puzzleName || 'a puzzle'}! (+${data.points || 0} pts)`
         }]
