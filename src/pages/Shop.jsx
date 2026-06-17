@@ -16,7 +16,7 @@ export default function Shop() {
   const [category, setCategory] = useState('all');
 
   useEffect(() => {
-    api.get('/shop/items').then(r => setItems(r.data.items)).catch(() => {});
+    api.get('/shop/items').then(r => setItems(r?.data?.items || [])).catch(() => {});
     api.get('/shop/owned').then(r => setOwned(r.data.ownedIds || [])).catch(() => {});
   }, []);
 
@@ -31,7 +31,7 @@ export default function Shop() {
     } catch (err) { toast.error(err.response?.data?.message || 'Purchase failed'); }
   };
 
-  const filtered = category === 'all' ? items : items.filter(i => i.category === category);
+  const filtered = category === 'all' ? (items || []) : (items || []).filter(i => i.category === category);
 
   return (
     <div className="min-h-screen pt-20 pb-12 px-4">

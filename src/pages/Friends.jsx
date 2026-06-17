@@ -13,8 +13,8 @@ export default function Friends() {
   const [results, setResults] = useState([]);
 
   const fetch = () => {
-    api.get('/friends/list').then(r => setFriends(r.data.friends)).catch(() => {});
-    api.get('/friends/pending').then(r => setPending(r.data)).catch(() => {});
+    api.get('/friends/list').then(r => setFriends(r?.data?.friends || [])).catch(() => {});
+    api.get('/friends/pending').then(r => setPending(r?.data || { incoming: [], outgoing: [] })).catch(() => {});
   };
 
   useEffect(() => { fetch(); }, []);

@@ -13,7 +13,7 @@ export default function Lobby() {
   const [search, setSearch] = useState('');
 
   const fetchRooms = () => {
-    api.get('/room/public').then(r => setRooms(r.data.rooms)).catch(() => {});
+    api.get('/room/public').then(r => setRooms(r?.data?.rooms || [])).catch(() => {});
   };
 
   useEffect(() => { fetchRooms(); const i = setInterval(fetchRooms, 5000); return () => clearInterval(i); }, []);
@@ -35,7 +35,7 @@ export default function Lobby() {
     } catch (err) { toast.error(err.response?.data?.message || 'Failed to join'); }
   };
 
-  const filtered = rooms.filter(r => r.name.toLowerCase().includes(search.toLowerCase()));
+  const filtered = (rooms || []).filter(r => r.name.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div className="min-h-screen pt-20 pb-12 px-4">
