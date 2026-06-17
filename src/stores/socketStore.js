@@ -10,7 +10,7 @@ export const useSocketStore = create((set, get) => ({
   typingUsers: [],
 
   connect: (token) => {
-    const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5002';
+    const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || (import.meta.env.DEV ? 'http://localhost:5002' : window.location.origin);
     const socket = io(SOCKET_URL, { auth: { token }, transports: ['websocket', 'polling'] });
 
     socket.on('connect', () => set({ connected: true }));
